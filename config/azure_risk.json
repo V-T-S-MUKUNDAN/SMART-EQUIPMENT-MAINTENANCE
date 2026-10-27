@@ -1,0 +1,34 @@
+{
+  "model_name": "Azure machine health & risk indicator v1",
+  "weights": {
+    "fail_freq": 25,
+    "fail_rec": 15,
+    "err_freq": 15,
+    "err_rec": 5,
+    "tele": 15,
+    "maint_burden": 5,
+    "maint_rec": 10,
+    "age": 10
+  },
+  "thresholds": {
+    "medium": 25,
+    "high": 50,
+    "critical": 75
+  },
+  "parameters": {
+    "recency_lookback_days": 90,
+    "telemetry_window_days": 30,
+    "telemetry_sigma_k": 2.0
+  },
+  "labels": {
+    "fail_freq": "Failure frequency",
+    "fail_rec": "Failure recency",
+    "err_freq": "Error frequency",
+    "err_rec": "Error recency",
+    "tele": "Telemetry deviation",
+    "maint_burden": "Planned-maintenance burden",
+    "maint_rec": "Time since last maintenance",
+    "age": "Machine age"
+  },
+  "notes": "Weights are relative: they are re-normalised per machine over the components that have data, so they do not have to sum to 100. Thresholds are score >= value. Age carries weight because machine age correlates with failure count in this dataset (see docs/risk_methodology.md)."
+}

@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.DS_Store
+database/*.db
+database/*.db-journal
+database/*.db-wal
+database/*.db-shm
+data/azure/*.csv
+data/ai4i2020.csv
+data/ai4i/*.csv
+.streamlit/secrets.toml

@@ -1,0 +1,29 @@
+{
+  "model_name": "AI4I operating-condition risk indicator v1",
+  "weights": {
+    "tool_wear": 25,
+    "strain": 30,
+    "power": 25,
+    "heat": 20
+  },
+  "thresholds": {
+    "medium": 25,
+    "high": 50,
+    "critical": 75
+  },
+  "parameters": {
+    "tool_wear_reference_min": 240,
+    "osf_threshold_minnm": {"L": 11000, "M": 12000, "H": 13000},
+    "power_safe_low_w": 3500,
+    "power_safe_high_w": 9000,
+    "hdf_temp_diff_limit_k": 8.6,
+    "hdf_speed_limit_rpm": 1380
+  },
+  "labels": {
+    "tool_wear": "Tool wear vs 240 min reference",
+    "strain": "Overstrain (tool wear x torque vs type limit)",
+    "power": "Power outside safe band",
+    "heat": "Heat-dissipation margin (low temp. difference and low speed)"
+  },
+  "notes": "Inputs are operating conditions only (tool wear, torque, speed, temperatures, machine type). The Machine failure / mode labels are NEVER inputs. Reference limits come from the published AI4I 2020 dataset description and are checked against this file's labels in Module 2 (rule agreement). The AI4I data is synthetic, so this is an operating-condition risk indicator, not a validated predictive-maintenance model."
+}
