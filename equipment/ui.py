@@ -283,10 +283,6 @@ div[data-testid="stDownloadButton"] button:hover,
   background: transparent !important;
   box-shadow: inset 2px 0 0 var(--rule);
 }
-[data-testid="stPageLink-NavLink"][href=""] {
-  background: transparent !important;
-  box-shadow: inset 2px 0 0 var(--ink);
-}
 [data-testid="stPageLink-NavLink"] p {
   font-size: 0.88rem !important;
   font-weight: 400 !important;
@@ -294,10 +290,6 @@ div[data-testid="stDownloadButton"] button:hover,
   overflow: visible !important;
   text-overflow: unset !important;
   line-height: 1.35;
-}
-[data-testid="stPageLink-NavLink"][href=""] p {
-  font-weight: 500 !important;
-  color: var(--ink);
 }
 [data-testid="stSidebar"] [data-baseweb="radio"] {
   gap: 2px;
@@ -445,6 +437,14 @@ def _direct(version, fn_path, args):
 def cached_call(fn_path: str, *args):
     """Cache any ``module.function(conn, *args)`` keyed by database version (args must be hashable)."""
     return _direct(db.db_version(), fn_path, args)
+
+
+def highlight_current_link(url_path: str) -> None:
+    """Mark the current page in the sidebar. A link's href is its url_path, and "" for the default page."""
+    link = f'[data-testid="stPageLink-NavLink"][href="{url_path}"]'
+    st.sidebar.markdown(f"<style>{link} {{ box-shadow: inset 2px 0 0 var(--ink); }} "
+                        f"{link} p {{ font-weight: 500 !important; color: var(--ink); }}</style>",
+                        unsafe_allow_html=True)
 
 
 # ----------------------------------------------------------------------------- session-backed state

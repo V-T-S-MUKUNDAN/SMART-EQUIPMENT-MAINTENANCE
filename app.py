@@ -44,6 +44,7 @@ elif choice == config.DATASET_AI4I:
 ui.sidebar_footer()
 
 nav = st.navigation(list(pages.values()), position="hidden")
+ui.highlight_current_link(nav.url_path)
 try:
     nav.run()
 except (ui.db.DatabaseNotFoundError, ui.DatabaseBusyError) as exc:

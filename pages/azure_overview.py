@@ -49,6 +49,9 @@ with c2:
         fig.add_scatter(x=trend["month"], y=trend["rolling_3m_avg"], name="3-month rolling average", mode="lines+markers")
         fig.update_layout(title="Historical failure trend")
         ui.show_fig(fig, key="ov_trend")
+        if trend["partial_month"].any():
+            st.caption("Partial months (" + ", ".join(trend.loc[trend["partial_month"] == 1, "month"]) + ") are only partly "
+                       "inside the date range or the data, so they are left out of the rolling average and monthly change.")
 
 c3, c4 = st.columns(2)
 with c3:

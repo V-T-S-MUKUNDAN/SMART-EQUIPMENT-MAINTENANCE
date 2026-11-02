@@ -161,18 +161,28 @@ monthly AS (
     FROM azure_failures
     WHERE ts >= :start AND ts < :end_excl {machine_filter} {component_filter}
     GROUP BY 1
+),
+-- A month only partly inside the range is counted, but its short total must not distort the trend,
+-- so it is left out of the month-on-month change and the rolling average.
+counts AS (
+    SELECT mo.month_start, COALESCE(mn.failures, 0) AS failures,
+           (mo.month_start < :start OR date(mo.month_start, '+1 month') > :end_excl) AS partial_month
+    FROM months mo
+    LEFT JOIN monthly mn ON mn.month = strftime('%Y-%m', mo.month_start)
 )
-SELECT strftime('%Y-%m', mo.month_start)                                    AS month,
-       COALESCE(mn.failures, 0)                                             AS failures,
-       COALESCE(mn.failures, 0) - LAG(COALESCE(mn.failures, 0)) OVER w_all  AS mom_change,
-       SUM(COALESCE(mn.failures, 0)) OVER w_all_cum                         AS cumulative_failures,
-       ROUND(AVG(COALESCE(mn.failures, 0)) OVER w_roll, 2)                  AS rolling_3m_avg
-FROM months mo
-LEFT JOIN monthly mn ON mn.month = strftime('%Y-%m', mo.month_start)
-WINDOW w_all     AS (ORDER BY mo.month_start),
-       w_all_cum AS (ORDER BY mo.month_start ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW),
-       w_roll    AS (ORDER BY mo.month_start ROWS BETWEEN 2 PRECEDING AND CURRENT ROW)
-ORDER BY mo.month_start;
+SELECT strftime('%Y-%m', month_start)                                       AS month,
+       failures,
+       CASE WHEN partial_month = 0 AND LAG(partial_month) OVER w_all = 0
+            THEN failures - LAG(failures) OVER w_all END                    AS mom_change,
+       SUM(failures) OVER w_all_cum                                         AS cumulative_failures,
+       CASE WHEN partial_month = 0
+            THEN ROUND(AVG(CASE WHEN partial_month = 0 THEN failures END) OVER w_roll, 2) END AS rolling_3m_avg,
+       partial_month
+FROM counts
+WINDOW w_all     AS (ORDER BY month_start),
+       w_all_cum AS (ORDER BY month_start ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW),
+       w_roll    AS (ORDER BY month_start ROWS BETWEEN 2 PRECEDING AND CURRENT ROW)
+ORDER BY month_start;
 
 -- name: failure_trend_by_component
 SELECT strftime('%Y-%m', ts) AS month, component, COUNT(*) AS failures

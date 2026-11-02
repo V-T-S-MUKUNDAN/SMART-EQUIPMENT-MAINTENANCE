@@ -18,7 +18,7 @@ There is **no join between Azure and AI4I**.
 
 Almost every named query uses `WITH`. Typical pattern: `base` (apply filters) → aggregate → window → `SELECT`.
 
-The Azure failure-trend query uses a **recursive CTE** to build a gap-free month calendar from `:start` to `:end_excl`, then LEFT JOINs actual monthly counts so months with zero failures still appear.
+The Azure failure-trend query uses a **recursive CTE** to build a gap-free month calendar from `:start` to `:end_excl`, then LEFT JOINs actual monthly counts so months with zero failures still appear. A month only partly inside the range is flagged `partial_month`, and its count stays in the totals but not in the month-on-month change or rolling average.
 
 ## Window functions
 

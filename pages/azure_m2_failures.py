@@ -117,6 +117,9 @@ with tabs[3]:
         fig.update_layout(title="Monthly failures (window functions: LAG, running SUM, rolling AVG)",
                           yaxis2=dict(overlaying="y", side="right", title="Cumulative"))
         ui.show_fig(fig, key="m2_trend")
+        if tr["partial_month"].any():
+            st.caption("Partial months (" + ", ".join(tr.loc[tr["partial_month"] == 1, "month"]) + ") are only partly "
+                       "inside the date range or the data, so they are left out of the rolling average and monthly change.")
         ui.show_table(tr)
         ui.download(tr, "azure_failure_trend.csv", key="m2_dl_tr")
         st.caption("Months with no recorded failures appear as zero. The maintenance log starts in mid-2014, "

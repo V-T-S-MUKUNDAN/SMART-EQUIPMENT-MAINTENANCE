@@ -148,6 +148,19 @@ def test_failure_trend_has_gap_free_months_and_correct_windows(conn, frames):
     assert tr["mom_change"].dropna().tolist() == exp.diff().dropna().tolist()
 
 
+def test_failure_trend_keeps_partial_months_out_of_trend_measures(conn, frames):
+    f, _, _ = _fl(frames)
+    tr = A.query(conn, "failure_trend", A.Filters("2015-01-15", "2015-03-05"))
+    assert tr["month"].tolist() == ["2015-01", "2015-02", "2015-03"]
+    assert tr["partial_month"].tolist() == [1, 0, 1]
+    inside = f[(f.ts >= "2015-01-15") & (f.ts < "2015-03-06")]
+    assert tr["failures"].sum() == len(inside)                     # still counted
+    feb = int((inside.ts.str[:7] == "2015-02").sum())
+    assert tr["rolling_3m_avg"].isna().tolist() == [True, False, True]
+    assert tr["rolling_3m_avg"].iloc[1] == feb                     # the partial January is not averaged in
+    assert tr["mom_change"].isna().all()
+
+
 def test_repeated_failures_use_lag_correctly(conn, frames):
     rep = A.query(conn, "repeated_failures", FULL)
     assert len(rep) == 1                                           # only machine 1 / comp1 failed twice
