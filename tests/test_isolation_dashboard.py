@@ -240,9 +240,11 @@ def test_unknown_selection_is_rejected():
 
 # ------------------------------------------------------------------ streamlit app (AppTest)
 @pytest.fixture
-def app_env(both_db, monkeypatch):
+def app_env(both_db, azure_dir, ai4i_dir, monkeypatch):
     import streamlit as st
     monkeypatch.setenv("SE_DB_PATH", str(both_db))
+    monkeypatch.setenv("SE_AZURE_DIR", str(azure_dir))
+    monkeypatch.setenv("SE_AI4I_DIR", str(ai4i_dir))
     st.cache_data.clear()
     yield both_db
     st.cache_data.clear()

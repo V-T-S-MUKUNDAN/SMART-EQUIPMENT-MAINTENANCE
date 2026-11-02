@@ -47,18 +47,21 @@ FROM agg LEFT JOIN med USING (period, metric)
 ORDER BY agg.metric, agg.period DESC;
 
 -- Other events inside the comparison windows (potential confounders of any observed change).
+-- Events at exactly :ts belong to neither window, so they get their own period. Only the selected
+-- machine + timestamp + component row is left out: other components serviced at :ts are confounders.
 -- name: window_confounders
 SELECT period, event_type, COUNT(*) AS events FROM (
-    SELECT CASE WHEN ts < :ts THEN 'before' ELSE 'after' END AS period, 'other maintenance' AS event_type
+    SELECT CASE WHEN ts < :ts THEN 'before' WHEN ts > :ts THEN 'after' ELSE 'at event' END AS period,
+           'other maintenance' AS event_type
       FROM azure_maintenance
-     WHERE machine_id = :machine_id AND ts <> :ts
+     WHERE machine_id = :machine_id AND NOT (ts = :ts AND component = COALESCE(:component, component))
        AND ts >= datetime(:ts, '-' || :hours || ' hours') AND ts <= datetime(:ts, '+' || :hours || ' hours')
     UNION ALL
-    SELECT CASE WHEN ts < :ts THEN 'before' ELSE 'after' END, 'failure' FROM azure_failures
+    SELECT CASE WHEN ts < :ts THEN 'before' WHEN ts > :ts THEN 'after' ELSE 'at event' END, 'failure' FROM azure_failures
      WHERE machine_id = :machine_id
        AND ts >= datetime(:ts, '-' || :hours || ' hours') AND ts <= datetime(:ts, '+' || :hours || ' hours')
     UNION ALL
-    SELECT CASE WHEN ts < :ts THEN 'before' ELSE 'after' END, 'error' FROM azure_errors
+    SELECT CASE WHEN ts < :ts THEN 'before' WHEN ts > :ts THEN 'after' ELSE 'at event' END, 'error' FROM azure_errors
      WHERE machine_id = :machine_id
        AND ts >= datetime(:ts, '-' || :hours || ' hours') AND ts <= datetime(:ts, '+' || :hours || ' hours')
 )

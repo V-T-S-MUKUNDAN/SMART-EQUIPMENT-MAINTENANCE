@@ -83,8 +83,7 @@ def table_fingerprint(path, tables):
     return out
 
 
-AZURE_TABLE_NAMES = ["azure_machines", "azure_telemetry", "azure_errors", "azure_maintenance", "azure_failures",
-                     "azure_fleet_baseline"]
+AZURE_TABLE_NAMES = ["azure_machines", "azure_telemetry", "azure_errors", "azure_maintenance", "azure_failures"]
 
 
 @pytest.fixture(scope="session")

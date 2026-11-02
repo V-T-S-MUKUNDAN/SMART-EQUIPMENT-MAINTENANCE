@@ -490,10 +490,11 @@ def azure_sidebar() -> None:
         st.session_state["az_filters"] = None
         return
     lo, hi = _run(az.data_bounds)
+    first = _run(az.default_start)
     machines = az_q("machine_list")
     comps = az_q("component_list")["component"].tolist()
     st.sidebar.markdown("**Filters**")
-    rng = st.sidebar.date_input("Date range", value=(date.fromisoformat(lo), date.fromisoformat(hi)),
+    rng = st.sidebar.date_input("Date range", value=(date.fromisoformat(first), date.fromisoformat(hi)),
                                 min_value=date.fromisoformat(lo), max_value=date.fromisoformat(hi), key="az_dates")
     if isinstance(rng, (tuple, list)) and len(rng) == 2:
         start, end = rng

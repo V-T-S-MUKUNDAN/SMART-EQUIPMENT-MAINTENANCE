@@ -232,7 +232,45 @@ def test_confounders_are_reported(conn):
     res = M.compare(conn, 1, "2015-02-10 06:00:00", 7, 24)         # failure/maintenance cluster around this date
     c = res["confounders"]
     assert c["events"].sum() > 0
-    assert set(c["period"]) <= {"before", "after"}
+    assert set(c["period"]) <= {"before", "at event", "after"}
+
+
+def test_simultaneous_events_are_confounders_at_the_event_time(conn):
+    # machine 1, 2015-02-10 06:00: comp1 and comp2 are both repaired after both fail at that instant
+    res = M.compare(conn, 1, "2015-02-10 06:00:00", 1, 5, "comp1")
+    at = res["confounders"].query("period == 'at event'").set_index("event_type")["events"]
+    assert at["other maintenance"] == 1                            # comp2 only; the selected comp1 row is excluded
+    assert at["failure"] == 2
+
+
+def test_fleet_band_ignores_readings_after_the_as_of_date(azure_db):
+    # A wild reading after the as-of date must not widen the band used for an earlier score.
+    f = A.Filters("2015-01-01", "2015-01-31")
+    cfg = R.RiskConfig.default()
+    c = db.connect(azure_db, read_only=True)
+    before = R.compute_risk(c, f, cfg).set_index("machine_id")["tele_exceed_rate"]
+    c.close()
+    w = db.connect(azure_db)
+    w.execute("UPDATE azure_telemetry SET volt = 1e6 WHERE ts >= '2015-03-01'")
+    w.commit()
+    w.close()
+    c = db.connect(azure_db, read_only=True)
+    after = R.compute_risk(c, f, cfg).set_index("machine_id")["tele_exceed_rate"]
+    c.close()
+    assert after.to_dict() == before.to_dict()
+
+
+def test_default_range_starts_at_telemetry_not_at_older_maintenance(azure_db):
+    w = db.connect(azure_db)
+    w.execute("INSERT INTO azure_maintenance (machine_id, ts, component) VALUES (1, '2014-06-01 06:00:00', 'comp1')")
+    w.commit()
+    w.close()
+    c = db.connect(azure_db, read_only=True)
+    assert A.data_bounds(c)[0] == "2014-06-01"                     # still selectable in the date picker
+    f = A.default_filters(c)
+    assert f.start == "2015-01-01"
+    assert A.query(c, "failure_trend", f)["month"].iloc[0] == "2015-01"
+    c.close()
 
 
 def test_component_summary_does_not_fan_out(conn):

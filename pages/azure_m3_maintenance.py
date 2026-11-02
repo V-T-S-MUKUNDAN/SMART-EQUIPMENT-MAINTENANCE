@@ -30,7 +30,7 @@ min_obs = st.slider("Minimum readings required in each window", 6, 120, 24, key=
                     help="Results are marked insufficient below this number of hourly readings.")
 sel = ev[ev["label"] == choice].iloc[0]
 
-res = ui.cached_call("equipment.azure.maintenance.compare", int(mid), sel["ts"], int(window), int(min_obs))
+res = ui.cached_call("equipment.azure.maintenance.compare", int(mid), sel["ts"], int(window), int(min_obs), sel["component"])
 st.markdown(f"**Machine {mid}** - {sel['kind']} maintenance of **{sel['component']}** at **{sel['ts']}**. "
             f"Before = {window} days before; after = {window} days after (the reading at the event time is excluded).")
 
@@ -87,7 +87,8 @@ if conf.empty:
     st.success("No other maintenance, failure or error events were recorded for this machine in either window.")
 else:
     ui.show_table(conf)
-    st.caption("Other events in the same windows make it harder to attribute any change to this maintenance.")
+    st.caption("Other events in the same windows make it harder to attribute any change to this maintenance. "
+               "'at event' means the same timestamp as the selected event; a failure-linked repair lists its own failure here.")
 
 st.subheader("Fleet-wide observed change by maintained component")
 st.caption("Average (after - before) of window means across all maintenance events with enough readings on both sides, "

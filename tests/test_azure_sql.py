@@ -210,6 +210,9 @@ def test_planned_vs_failure_linked_maintenance_matches_pandas(conn, frames):
     assert (got["planned_maintenance_count"] + got["failure_linked_maintenance_count"] == got["maintenance_count"]).all()
     mc = A.query(conn, "maintenance_by_component", FULL)
     assert mc["events"].sum() == len(m)
+    one = A.Filters(FULL.start, FULL.end, (1,), ("comp1",))        # filter columns must not be ambiguous in the join
+    mc1 = A.query(conn, "maintenance_by_component", one)
+    assert mc1["events"].sum() == len(m[(m.machine_id == 1) & (m.component == "comp1")])
 
 
 def test_machine_timeline_is_union_not_join(conn):
@@ -222,7 +225,7 @@ def test_machine_timeline_is_union_not_join(conn):
 @pytest.mark.real_data
 def test_real_data_totals_and_no_fan_out(real_db):
     c = db.connect(real_db, read_only=True)
-    f = A.default_filters(c)
+    f = A.Filters(*A.data_bounds(c))                               # full range: maintenance predates telemetry
     k = A.kpis(c, f)
     assert (k["machines"], k["telemetry_records"], k["failures"], k["errors"], k["maintenance_events"]) == \
         (100, 876_100, 761, 3_919, 3_286)

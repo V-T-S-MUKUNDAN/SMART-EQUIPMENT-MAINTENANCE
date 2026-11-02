@@ -23,20 +23,20 @@ Boundaries are inclusive on the lower side (`score >= threshold`). Defaults: Med
 
 ### Inputs (never labels of a future event)
 
-| Component | Default weight | Formula (then min-max across all machines) |
+| Component | Default weight | Formula and scaling |
 |---|---|---|
-| `fail_freq` | 25 | failure count in the date range |
-| `fail_rec` | 15 | `MAX(0, 1 − days_since_last_failure / lookback)` (lookback default 90 days) |
-| `err_freq` | 15 | error count in the date range |
-| `err_rec` | 5 | same recency decay on last error |
-| `tele` | 15 | share of readings in the last `telemetry_window_days` (30) whose volt/rotate/pressure/vibration fall outside fleet mean ± `k`·std (`k` = 2) |
-| `maint_burden` | 5 | **planned** maintenance count (failure-linked repairs excluded) |
-| `maint_rec` | 10 | recency decay on last maintenance of any kind (or the full range if none) |
-| `age` | 10 | machine age (years) |
+| `fail_freq` | 25 | failure count in the date range, min-max scaled |
+| `fail_rec` | 15 | `MAX(0, 1 − days_since_last_failure / lookback)` (lookback default 90 days), already 0–1, not min-max scaled |
+| `err_freq` | 15 | error count in the date range, min-max scaled |
+| `err_rec` | 5 | same recency decay on last error, not min-max scaled |
+| `tele` | 15 | share of readings in the last `telemetry_window_days` (30) whose volt/rotate/pressure/vibration fall outside fleet mean ± `k`·std (`k` = 2), with the mean and std taken from readings before the as-of date; min-max scaled |
+| `maint_burden` | 5 | **planned** maintenance count (failure-linked repairs excluded), min-max scaled |
+| `maint_rec` | 10 | days since last maintenance of any kind (or the full range if none), min-max scaled, so longer gaps score higher |
+| `age` | 10 | machine age (years), min-max scaled |
 
 Weights are **re-normalised** over the components that have data for that machine. If a machine has no telemetry in the window, `tele` is dropped and `weight_total` becomes 85 with the default weights. Contributions `c_*` are the points that add up to `risk_score`.
 
-Min-max uses **all** machines (`MIN/MAX() OVER ()`), not the filtered subset, so selecting one machine does not change its score. `priority_rank` (`RANK() OVER (ORDER BY risk_score DESC)`) is also computed before the machine filter.
+Where min-max applies, it uses **all** machines (`MIN/MAX() OVER ()`), not the filtered subset, so selecting one machine does not change its score. `priority_rank` (`RANK() OVER (ORDER BY risk_score DESC)`) is also computed before the machine filter.
 
 ### Why these weights (this dataset, descriptive)
 

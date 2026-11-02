@@ -36,6 +36,15 @@ mt AS (
     WHERE x.ts >= :start AND x.ts < :end_excl
     GROUP BY x.machine_id
 ),
+-- fleet baseline from readings before the as-of instant only, so an earlier score never sees later data
+b AS (
+    SELECT AVG(volt) AS volt_mean,           sqrt(MAX(AVG(volt*volt) - AVG(volt)*AVG(volt), 0))                     AS volt_std,
+           AVG(rotate) AS rotate_mean,       sqrt(MAX(AVG(rotate*rotate) - AVG(rotate)*AVG(rotate), 0))             AS rotate_std,
+           AVG(pressure) AS pressure_mean,   sqrt(MAX(AVG(pressure*pressure) - AVG(pressure)*AVG(pressure), 0))     AS pressure_std,
+           AVG(vibration) AS vibration_mean, sqrt(MAX(AVG(vibration*vibration) - AVG(vibration)*AVG(vibration), 0)) AS vibration_std
+    FROM azure_telemetry
+    WHERE ts < :end_excl
+),
 -- share of recent readings outside the fleet baseline band (mean +/- k*std), per sensor
 t AS (
     SELECT tl.machine_id, COUNT(*) AS tele_obs,
@@ -49,7 +58,7 @@ t AS (
                     WHEN ABS(tl.pressure - b.pressure_mean) > :k * b.pressure_std THEN 1.0 ELSE 0.0 END) AS pressure_exceed,
            AVG(CASE WHEN tl.vibration IS NULL THEN NULL
                     WHEN ABS(tl.vibration - b.vibration_mean) > :k * b.vibration_std THEN 1.0 ELSE 0.0 END) AS vibration_exceed
-    FROM azure_telemetry tl CROSS JOIN azure_fleet_baseline b
+    FROM azure_telemetry tl CROSS JOIN b
     WHERE tl.ts >= MAX(:start, datetime(:end_excl, '-' || :tele_days || ' days')) AND tl.ts < :end_excl
     GROUP BY tl.machine_id
 ),
@@ -165,12 +174,20 @@ ORDER BY x.ts DESC;
 
 -- Readings in the telemetry window outside the fleet band, largest deviation first.
 -- name: ev_telemetry
+WITH b AS (
+    SELECT AVG(volt) AS volt_mean,           sqrt(MAX(AVG(volt*volt) - AVG(volt)*AVG(volt), 0))                     AS volt_std,
+           AVG(rotate) AS rotate_mean,       sqrt(MAX(AVG(rotate*rotate) - AVG(rotate)*AVG(rotate), 0))             AS rotate_std,
+           AVG(pressure) AS pressure_mean,   sqrt(MAX(AVG(pressure*pressure) - AVG(pressure)*AVG(pressure), 0))     AS pressure_std,
+           AVG(vibration) AS vibration_mean, sqrt(MAX(AVG(vibration*vibration) - AVG(vibration)*AVG(vibration), 0)) AS vibration_std
+    FROM azure_telemetry
+    WHERE ts < :end_excl
+)
 SELECT t.ts, t.volt, t.rotate, t.pressure, t.vibration,
        ROUND(ABS(t.volt - b.volt_mean) / b.volt_std, 2)                   AS volt_sigma,
        ROUND(ABS(t.rotate - b.rotate_mean) / b.rotate_std, 2)             AS rotate_sigma,
        ROUND(ABS(t.pressure - b.pressure_mean) / b.pressure_std, 2)       AS pressure_sigma,
        ROUND(ABS(t.vibration - b.vibration_mean) / b.vibration_std, 2)    AS vibration_sigma
-FROM azure_telemetry t CROSS JOIN azure_fleet_baseline b
+FROM azure_telemetry t CROSS JOIN b
 WHERE t.machine_id = :machine_id
   AND t.ts >= MAX(:start, datetime(:end_excl, '-' || :tele_days || ' days')) AND t.ts < :end_excl
   AND (ABS(t.volt - b.volt_mean) > :k * b.volt_std OR ABS(t.rotate - b.rotate_mean) > :k * b.rotate_std
@@ -180,6 +197,3 @@ ORDER BY MAX(ABS(t.volt - b.volt_mean) / b.volt_std, ABS(t.rotate - b.rotate_mea
              ABS(t.pressure - b.pressure_mean) / b.pressure_std,
              ABS(t.vibration - b.vibration_mean) / b.vibration_std) DESC
 LIMIT 200;
-
--- name: baseline
-SELECT * FROM azure_fleet_baseline;

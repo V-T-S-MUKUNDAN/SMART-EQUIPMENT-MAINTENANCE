@@ -26,11 +26,10 @@ Defined in `sql/common/schema.sql`.
 | `azure_errors` | one error event | unique `(machine_id, ts, error_type)` | `PdM_errors.csv` |
 | `azure_failures` | one failure event | unique `(machine_id, ts, component)` | `PdM_failures.csv` |
 | `azure_maintenance` | one maintenance event | unique `(machine_id, ts, component)` | `PdM_maint.csv` |
-| `azure_fleet_baseline` | one row | `baseline_id = 1` | derived after load |
 
 Documented row counts (this project, verified): 100 machines, 876,100 telemetry, 3,919 errors, 3,286 maintenance, 761 failures.
 
-`azure_fleet_baseline` stores fleet mean/std of volt, rotate, pressure, vibration so the risk query does not re-scan 876k telemetry rows. Std-dev is `sqrt(E[x²] − E[x]²)`.
+The fleet mean/std of volt, rotate, pressure and vibration are computed inside the risk query from readings before the as-of instant, so an earlier score never uses later data. Std-dev is `sqrt(E[x²] − E[x]²)`.
 
 Foreign keys: every event/telemetry row references `azure_machines(machine_id)`. Indexes exist on timestamps and on `(component/error_type, machine_id)`.
 

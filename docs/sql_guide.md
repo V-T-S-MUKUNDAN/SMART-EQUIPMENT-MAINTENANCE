@@ -6,7 +6,7 @@ Filter values are **never interpolated into SQL**. `{machine_filter}`, `{compone
 
 ## Joins (aggregate first)
 
-Azure event tables are aggregated per machine in views, then LEFT JOINed to `azure_machines`. Failures × errors × maintenance therefore cannot multiply rows. Tests assert that the joined summary has exactly one row per machine.
+Azure event tables are aggregated per machine first (CTEs in the named queries, and the same pattern in the reusable `v_azure_*` views), then LEFT JOINed to `azure_machines`. Failures × errors × maintenance therefore cannot multiply rows. Tests assert that the joined summary has exactly one row per machine.
 
 The maintenance/failure split is a 1:0..1 LEFT JOIN on `(machine_id, ts, component)` (those triples are unique on both sides).
 
@@ -25,7 +25,6 @@ The Azure failure-trend query uses a **recursive CTE** to build a gap-free month
 | Function | Where |
 |---|---|
 | `LAG` | hours between successive failures/errors; month-on-month change; bin-to-bin failure-rate change |
-| `LEAD` | (available; gaps use LAG of the next row) |
 | `ROW_NUMBER` | overall group ranking (AI4I type × wear band) |
 | `RANK` | fleet-wide risk rank (computed **before** the machine filter); rate rank within type |
 | `NTILE(10)` | AI4I risk-score deciles |
@@ -61,7 +60,7 @@ AI4I risk evaluation queries embed the scoring SELECT via a `{risk}` placeholder
 
 ## Scaling, ranking, running totals
 
-Azure risk factors are min-max scaled across **all** machines (`(x − MIN(x) OVER ()) / NULLIF(MAX − MIN, 0)`). Recency is a linear decay over a configurable lookback. Telemetry is the share of recent readings outside fleet mean ± k·std.
+Azure risk factors are min-max scaled across **all** machines (`(x − MIN(x) OVER ()) / NULLIF(MAX − MIN, 0)`). Failure and error recency are a linear decay over a configurable lookback, already on a 0–1 scale and not min-max scaled. Time since maintenance is min-max scaled days. Telemetry is the share of recent readings outside fleet mean ± k·std.
 
 AI4I factors are each clipped to `[0, 1]` against documented reference limits, then weighted.
 

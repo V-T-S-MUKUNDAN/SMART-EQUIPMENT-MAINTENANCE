@@ -66,9 +66,14 @@ def data_bounds(conn: sqlite3.Connection) -> tuple[str, str]:
     return str(row["min_ts"])[:10], str(row["max_ts"])[:10]
 
 
+def default_start(conn: sqlite3.Connection) -> str:
+    """First telemetry day. Maintenance history starts earlier, so data_bounds alone would add empty months."""
+    first = query(conn, "first_telemetry").iloc[0]["min_ts"]
+    return data_bounds(conn)[0] if first is None else str(first)[:10]
+
+
 def default_filters(conn: sqlite3.Connection) -> Filters:
-    lo, hi = data_bounds(conn)
-    return Filters(lo, hi)
+    return Filters(default_start(conn), data_bounds(conn)[1])
 
 
 def kpis(conn: sqlite3.Connection, f: Filters) -> dict:
