@@ -4,11 +4,12 @@ Run:  streamlit run app.py
 """
 import streamlit as st
 
-from equipment import config, navigation, ui
+from equipment import config, db, navigation, ui
 
 st.set_page_config(page_title="Smart Equipment", page_icon=":material/precision_manufacturing:",
                    layout="wide", initial_sidebar_state="expanded")
 ui.inject_css()
+db.restore_packaged_database()
 
 ui.brand()
 OPTIONS = [config.DATASET_AZURE, config.DATASET_AI4I, "both"]

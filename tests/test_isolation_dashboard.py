@@ -330,6 +330,29 @@ def test_every_page_renders_without_exception(app_env, dataset):
         assert not at.error, f"{fname}: {[e.value for e in at.error]}"
 
 
+@pytest.mark.parametrize("dataset,page", [("azure", "azure_m1_data.py"), ("ai4i", "ai4i_m1_data.py")])
+def test_module1_with_prebuilt_database_and_no_csvs(app_env, tmp_path, monkeypatch, dataset, page):
+    monkeypatch.setenv("SE_AZURE_DIR", str(tmp_path / "none"))
+    monkeypatch.setenv("SE_AI4I_DIR", str(tmp_path / "none"))
+    at = _run(dataset, page)
+    assert not at.exception and not at.error
+    assert any("prebuilt database" in i.value for i in at.info)
+    assert not at.button
+
+
+def test_packaged_database_is_restored_once(tmp_path, monkeypatch):
+    import gzip
+    monkeypatch.delenv("SE_DB_PATH", raising=False)
+    monkeypatch.setattr(config, "ROOT", tmp_path)
+    (tmp_path / "database").mkdir()
+    with gzip.open(tmp_path / "database" / "equipment.db.gz", "wb") as fh:
+        fh.write(b"packaged")
+    assert db.restore_packaged_database() is True
+    assert (tmp_path / "database" / "equipment.db").read_bytes() == b"packaged"
+    assert db.restore_packaged_database() is False                 # an existing database is never replaced
+    assert [p.name for p in (tmp_path / "database").iterdir() if p.suffix == ".tmp"] == []
+
+
 def test_ai4i_module3_explains_it_is_unsupported(app_env):
     at = _run("ai4i", "ai4i_m3_maintenance.py")
     assert not at.exception

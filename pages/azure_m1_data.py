@@ -18,38 +18,43 @@ st.caption(f"Folder: `{data_dir}` (override with the SE_AZURE_DIR environment va
 facts = pd.DataFrame([readiness.file_facts(data_dir / name) for name in V.FILES.values()])
 facts["Documented rows"] = [V.EXPECTED_COUNTS[k] for k in V.FILES]
 ui.show_table(facts)
-if not facts["Found"].all():
+files_found = facts["Found"].all()
+packaged = not files_found and ui.db_ready(ui.AZURE_TABLES)[0]
+if packaged:
+    st.info("This deployment uses a prebuilt database, so the source CSVs and load controls are not included.")
+elif not files_found:
     st.error("One or more source files are missing. Place the PdM_*.csv files in the folder above.")
 
 # --- build / refresh -----------------------------------------------------------------------------------------
-st.subheader("2. Build or refresh the database")
-st.write("Loading is transactional and idempotent: unchanged source files are skipped, changed files replace the "
-         "Azure tables atomically, and rows that fail validation are kept in `rejected_records` with a reason. "
-         "AI4I tables are never touched.")
-c1, c2, c3 = st.columns(3)
-if c1.button("Validate files only (no database writes)"):
-    try:
-        with st.spinner("Validating..."):
-            validated = V.validate_all(data_dir)
-        rows = [{"File": vt.source_file, "Rows read": vt.rows_read, "Valid": vt.rows_valid,
-                 "Rejected": len(vt.rejected), "Warnings": "; ".join(vt.warnings)} for vt in validated.values()]
-        ui.show_table(pd.DataFrame(rows))
-    except (MissingDatasetFilesError, ValidationError) as exc:
-        st.error(str(exc))
-for label, force, col in (("Load / update Azure data", False, c2), ("Force full reload (Azure only)", True, c3)):
-    if col.button(label):
+if not packaged:
+    st.subheader("2. Build or refresh the database")
+    st.write("Loading is transactional and idempotent: unchanged source files are skipped, changed files replace the "
+             "Azure tables atomically, and rows that fail validation are kept in `rejected_records` with a reason. "
+             "AI4I tables are never touched.")
+    c1, c2, c3 = st.columns(3)
+    if c1.button("Validate files only (no database writes)"):
         try:
-            with st.spinner("Loading (about 10 seconds)..."):
-                rep = L.load_azure(force=force)
-            (st.success if rep.ok else st.error)(f"Azure load: {rep.status} in {rep.seconds}s")
-            for m in rep.messages:
-                st.write(m)
-            ui.show_table(rep.to_frame().drop(columns=["warnings"]))
-            st.cache_data.clear()
+            with st.spinner("Validating..."):
+                validated = V.validate_all(data_dir)
+            rows = [{"File": vt.source_file, "Rows read": vt.rows_read, "Valid": vt.rows_valid,
+                     "Rejected": len(vt.rejected), "Warnings": "; ".join(vt.warnings)} for vt in validated.values()]
+            ui.show_table(pd.DataFrame(rows))
         except (MissingDatasetFilesError, ValidationError) as exc:
             st.error(str(exc))
-        except Exception as exc:
-            st.error(f"Load failed and was rolled back: {exc}")
+    for label, force, col in (("Load / update Azure data", False, c2), ("Force full reload (Azure only)", True, c3)):
+        if col.button(label):
+            try:
+                with st.spinner("Loading (about 10 seconds)..."):
+                    rep = L.load_azure(force=force)
+                (st.success if rep.ok else st.error)(f"Azure load: {rep.status} in {rep.seconds}s")
+                for m in rep.messages:
+                    st.write(m)
+                ui.show_table(rep.to_frame().drop(columns=["warnings"]))
+                st.cache_data.clear()
+            except (MissingDatasetFilesError, ValidationError) as exc:
+                st.error(str(exc))
+            except Exception as exc:
+                st.error(f"Load failed and was rolled back: {exc}")
 
 # --- readiness ----------------------------------------------------------------------------------------------
 st.subheader("3. Database readiness")

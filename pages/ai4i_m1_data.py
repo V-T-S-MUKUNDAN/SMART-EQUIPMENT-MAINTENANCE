@@ -16,7 +16,10 @@ try:
     facts = readiness.file_facts(path)
     ui.show_table(pd.DataFrame([facts]))
 except MissingDatasetFilesError as exc:
-    st.error(str(exc))
+    if ui.db_ready(["ai4i_machine_data"])[0]:
+        st.info("This deployment uses a prebuilt database, so the source CSV and load controls are not included.")
+    else:
+        st.error(str(exc))
     path = None
 
 st.subheader("2. Column mapping used for ingestion")

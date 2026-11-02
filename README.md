@@ -55,6 +55,12 @@ The CSVs are gitignored because of their size, so a fresh clone has no data. `sc
 2. Download the [Azure dataset from Kaggle](https://www.kaggle.com/datasets/arnabbiswas1/microsoft-azure-predictive-maintenance) (free account needed) and put the five `PdM_*.csv` files in `data/azure/`.
 3. Download the [AI4I 2020 dataset from UCI](https://archive.ics.uci.edu/dataset/601/ai4i+2020+predictive+maintenance+dataset) and put `ai4i2020.csv` in `data/`. The UTF-8 BOM on its header is handled by the loader.
 
+## Online deployment
+
+`database/equipment.db.gz` is a prebuilt copy of the database. When `database/equipment.db` is missing, the app unpacks it on startup, so a hosted copy works without the CSVs. Module 01 then hides its load controls.
+
+After reloading the data locally, refresh the packaged copy with `python scripts/package_db.py` and commit it.
+
 ## Project structure
 
 ```

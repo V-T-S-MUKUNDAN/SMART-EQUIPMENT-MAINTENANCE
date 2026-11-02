@@ -1,8 +1,12 @@
 """SQLite connection helpers: read-only access, busy timeouts, parameterised queries."""
 from __future__ import annotations
 
+import gzip
 import math
+import os
+import shutil
 import sqlite3
+import tempfile
 from functools import lru_cache
 from pathlib import Path
 from typing import Iterable, Mapping, Sequence
@@ -39,6 +43,26 @@ def connect(path: str | Path | None = None, read_only: bool = False, timeout: fl
     conn.execute(f"PRAGMA busy_timeout = {int(timeout * 1000)}")
     _register_functions(conn)
     return conn
+
+
+def restore_packaged_database() -> bool:
+    """Unpack database/equipment.db.gz when the default database is missing (a hosted copy has no CSVs).
+
+    Skipped when SE_DB_PATH is set. The file appears atomically, so concurrent sessions never see a partial copy.
+    """
+    target = config.db_path()
+    packaged = config.ROOT / "database" / "equipment.db.gz"
+    if "SE_DB_PATH" in os.environ or target.exists() or not packaged.exists():
+        return False
+    fd, tmp = tempfile.mkstemp(dir=target.parent, suffix=".tmp")
+    try:
+        with os.fdopen(fd, "wb") as out, gzip.open(packaged, "rb") as src:
+            shutil.copyfileobj(src, out)
+        os.replace(tmp, target)
+    finally:
+        if os.path.exists(tmp):
+            os.unlink(tmp)
+    return True
 
 
 def db_version(path: str | Path | None = None) -> tuple[int, int] | None:
