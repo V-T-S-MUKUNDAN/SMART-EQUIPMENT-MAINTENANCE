@@ -58,7 +58,7 @@ Suggested actions in Module 05 are **rule-based inspection recommendations** fro
 - Not causal ("this machine will fail").
 - Historical recorded events plus recent telemetry, summarised.
 
-### Observed scores on the loaded Azure file (as-of 2016-01-01, all machines, default config)
+### Observed scores on the loaded Azure file (default date range 2015-01-01 to 2016-01-01, so as-of 2016-01-02; all machines, default config)
 
 | | |
 |---|---|

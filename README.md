@@ -130,7 +130,9 @@ Executed against `database/equipment.db` after `python scripts/load_data.py`.
 
 Integrity: `PRAGMA integrity_check = ok`, 0 foreign-key violations.
 
-Azure risk (default config, as-of 2016-01-01, all machines): mean **46.33**, median 46.02, min 19.54, max 72.81. Categories: Low 2, Medium 59, High **39**, Critical **0**. (If another report listed a different mean or a non-zero Critical count, it used different weights, a different as-of date, or a different implementation.)
+The dashboard's default Azure date range is 2015-01-01 to 2016-01-01, starting at the first telemetry reading. It therefore shows 2,886 maintenance events; the other 400 (3,286 in total) are from 2014, and you can include them by widening the date range. All failures and errors fall inside the default range.
+
+Azure risk (default config and date range, as-of 2016-01-02, the day after the last selected date; all machines): mean **46.33**, median 46.02, min 19.54, max 72.81. Categories: Low 2, Medium 59, High **39**, Critical **0**. (If another report listed a different mean or a non-zero Critical count, it used different weights, a different as-of date, or a different implementation.)
 
 ### AI4I (`data/ai4i2020.csv`)
 
@@ -153,6 +155,7 @@ AI4I indicator (default config): mean **32.3**, 3,560 Low / 5,170 Medium / 1,190
 
 ```
 python -m pytest tests -q
+# with the real data loaded: 174 passed
 # fresh clone, no data: 169 passed, 5 skipped
 ```
 
