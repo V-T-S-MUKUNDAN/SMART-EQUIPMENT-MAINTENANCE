@@ -2,8 +2,6 @@
 
 Advanced **SQL** analytics (not ML) over two independent predictive-maintenance datasets in one SQLite database, with a Streamlit dashboard.
 
-**No existing project was found in this folder.** The application, database pipeline, tests and documentation were built from scratch for this workspace.
-
 | Dataset | Role | Observation unit |
 |---|---|---|
 | [Microsoft Azure Predictive Maintenance](https://www.kaggle.com/datasets/arnabbiswas1/microsoft-azure-predictive-maintenance) | Five CSVs: machines, hourly telemetry, errors, maintenance, failures | 100 machines over ~1 year of hourly readings |
@@ -20,7 +18,7 @@ python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements.txt
 
-# Place source CSVs (already present in this workspace):
+# Download the source CSVs first (they are not in this repo; see "Data setup"), so that you have:
 #   data/azure/PdM_machines.csv
 #   data/azure/PdM_telemetry.csv
 #   data/azure/PdM_errors.csv
@@ -40,7 +38,7 @@ python scripts/load_data.py --dataset ai4i --force
 python scripts/load_data.py --db /tmp/equipment.db
 ```
 
-Tests (uses small synthetic CSVs; tests marked `real_data` also hit `database/equipment.db` when it exists):
+Tests (use small synthetic CSVs, so they need no download; the 5 tests marked `real_data` run only when `database/equipment.db` exists and are skipped otherwise):
 
 ```bash
 source .venv/bin/activate
@@ -49,10 +47,13 @@ python -m pytest tests -q
 
 Environment overrides: `SE_DB_PATH`, `SE_AZURE_DIR`, `SE_AI4I_DIR`, `SE_CONFIG_DIR`.
 
-## Source files used
+## Data setup
 
-- Azure CSVs were downloaded into `data/azure/` (Kaggle public copy of the Microsoft PdM set).
-- AI4I was found **inside the project** at `data/ai4i2020.csv` (UTF-8 BOM on the header). Unrelated personal directories were not searched.
+The CSVs are gitignored because of their size, so a fresh clone has no data. `scripts/load_data.py` stops with "cannot load" until they are in place.
+
+1. Create the folder: `mkdir -p data/azure`
+2. Download the [Azure dataset from Kaggle](https://www.kaggle.com/datasets/arnabbiswas1/microsoft-azure-predictive-maintenance) (free account needed) and put the five `PdM_*.csv` files in `data/azure/`.
+3. Download the [AI4I 2020 dataset from UCI](https://archive.ics.uci.edu/dataset/601/ai4i+2020+predictive+maintenance+dataset) and put `ai4i2020.csv` in `data/`. The UTF-8 BOM on its header is handled by the loader.
 
 ## Project structure
 
@@ -113,7 +114,7 @@ SQL results are cached with `st.cache_data` keyed on `db.db_version()` (file mti
 
 Independent summaries placed side by side: table sizes, load-log quality, label definitions, proportions **with their own denominators** and a "Directly comparable? **No**" column, capability matrix, limitations. Raw failure counts are not compared. Risk scores are not compared. No SQL join.
 
-## Validation results (this workspace)
+## Validation results
 
 Executed against `database/equipment.db` after `python scripts/load_data.py`.
 
@@ -152,7 +153,7 @@ AI4I indicator (default config): mean **32.3**, 3,560 Low / 5,170 Medium / 1,190
 
 ```
 python -m pytest tests -q
-# 171 passed in 16.06s
+# fresh clone, no data: 169 passed, 5 skipped
 ```
 
 | File | What it covers |
@@ -187,6 +188,6 @@ CTEs, recursive month calendar, window functions (`LAG`, `RANK`, `ROW_NUMBER`, `
 | Load rolled back | Previous rows are still there; the failed attempt is in `data_load_log` |
 | Dashboard shows old numbers | Re-run after the load finishes; cache key is the database file version |
 | `database is locked` | Wait for `load_data.py` to finish |
-| Tests skip `real_data` | Build `database/equipment.db` first; in this workspace they ran (5 passed) |
+| Tests skip `real_data` | Build `database/equipment.db` first; there are 5 such tests |
 
 Python 3.14, SQLite 3.51 (math functions available; `sqrt` / `pi` are also registered in `db.connect` as a fallback).

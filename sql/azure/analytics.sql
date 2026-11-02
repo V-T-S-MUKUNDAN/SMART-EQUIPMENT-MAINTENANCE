@@ -13,6 +13,10 @@ SELECT MIN(ts) AS min_ts, MAX(ts) AS max_ts FROM (
     UNION ALL SELECT MIN(ts) FROM azure_maintenance UNION ALL SELECT MAX(ts) FROM azure_maintenance
 );
 
+-- Default start of the date filter (maintenance history begins earlier than the other tables).
+-- name: first_telemetry
+SELECT MIN(ts) AS min_ts FROM azure_telemetry;
+
 -- name: machine_list
 SELECT machine_id, model, age FROM azure_machines ORDER BY machine_id;
 
@@ -277,7 +281,7 @@ SELECT COUNT(*) AS machines,
 FROM base;
 
 -- Correlated subquery: was the same machine logging an error shortly before each failure?
--- (descriptive only - no baseline for "errors in any random window" is implied)
+-- (descriptive only - the uniform-rate column is a rough reference, not a statistical test)
 -- name: errors_before_failures
 SELECT f.component,
        COUNT(*) AS failures,
@@ -303,14 +307,17 @@ GROUP BY f.component
 ORDER BY f.component;
 
 -- name: maintenance_by_component
+WITH x AS (
+    SELECT machine_id, ts, component FROM azure_maintenance
+    WHERE ts >= :start AND ts < :end_excl {machine_filter} {component_filter}
+)
 SELECT x.component,
        COUNT(*)                                             AS events,
        SUM(CASE WHEN f.event_id IS NULL THEN 1 ELSE 0 END)  AS planned,
        SUM(CASE WHEN f.event_id IS NULL THEN 0 ELSE 1 END)  AS failure_linked,
        COUNT(DISTINCT x.machine_id)                         AS machines
-FROM azure_maintenance x
+FROM x
 LEFT JOIN azure_failures f ON f.machine_id = x.machine_id AND f.ts = x.ts AND f.component = x.component
-WHERE x.ts >= :start AND x.ts < :end_excl {machine_filter} {component_filter}
 GROUP BY x.component
 ORDER BY x.component;
 

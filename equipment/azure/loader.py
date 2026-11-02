@@ -33,18 +33,6 @@ INSERT_SQL = {
                  ["machine_id", "ts", "component"]),
 }
 
-BASELINE_SQL = """
-DELETE FROM azure_fleet_baseline;
-INSERT INTO azure_fleet_baseline
-SELECT 1, COUNT(*),
-  AVG(volt),      sqrt(MAX(AVG(volt*volt)           - AVG(volt)*AVG(volt), 0)),
-  AVG(rotate),    sqrt(MAX(AVG(rotate*rotate)       - AVG(rotate)*AVG(rotate), 0)),
-  AVG(pressure),  sqrt(MAX(AVG(pressure*pressure)   - AVG(pressure)*AVG(pressure), 0)),
-  AVG(vibration), sqrt(MAX(AVG(vibration*vibration) - AVG(vibration)*AVG(vibration), 0))
-FROM azure_telemetry;
-"""
-
-
 def init_schema(conn: sqlite3.Connection) -> None:
     """Create tables, indexes and views if missing (never drops data)."""
     loading.init_common_schema(conn)
@@ -105,8 +93,6 @@ def load_azure(db_path: str | Path | None = None, data_dir: str | Path | None = 
                                  "; ".join(vt.warnings) or None)
                 report.tables.append(TableReport(V.TABLES[name], vt.source_file, vt.rows_read, loaded,
                                                  len(vt.rejected), "success", vt.warnings))
-            for stmt in [s for s in BASELINE_SQL.split(";") if s.strip()]:
-                conn.execute(stmt)
             conn.execute("COMMIT")
         except Exception as exc:
             conn.execute("ROLLBACK")

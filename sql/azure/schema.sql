@@ -52,13 +52,5 @@ CREATE TABLE IF NOT EXISTS azure_maintenance (
 CREATE INDEX IF NOT EXISTS idx_az_maint_ts   ON azure_maintenance (ts);
 CREATE INDEX IF NOT EXISTS idx_az_maint_comp ON azure_maintenance (component, machine_id);
 
--- Derived (materialised) single-row fleet baseline for telemetry. Rebuilt by the loader after every load,
--- so the risk query never has to re-scan 876k telemetry rows. Std-dev = sqrt(E[x^2] - E[x]^2).
-CREATE TABLE IF NOT EXISTS azure_fleet_baseline (
-    baseline_id INTEGER PRIMARY KEY CHECK (baseline_id = 1),
-    n_obs       INTEGER,
-    volt_mean REAL, volt_std REAL,
-    rotate_mean REAL, rotate_std REAL,
-    pressure_mean REAL, pressure_std REAL,
-    vibration_mean REAL, vibration_std REAL
-);
+-- The fleet baseline is now computed per as-of date in sql/azure/risk.sql; remove the old stored copy.
+DROP TABLE IF EXISTS azure_fleet_baseline;

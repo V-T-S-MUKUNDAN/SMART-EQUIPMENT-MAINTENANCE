@@ -25,16 +25,17 @@ def pct_change(before, after):
 
 
 def compare(conn: sqlite3.Connection, machine_id: int, ts: str, window_days: int = 7,
-            min_obs: int = 24) -> dict:
+            min_obs: int = 24, component: str | None = None) -> dict:
     """Compare telemetry in [ts - W, ts) with (ts, ts + W].
 
     Returns a dict: ``table`` (one row per metric with before/after stats, differences, pct change),
     ``n_before`` / ``n_after``, ``sufficient`` (both windows >= min_obs), ``messages``, ``confounders``.
+    ``component`` identifies the selected event, so other components serviced at ``ts`` count as confounders.
     """
     q = db.load_named_queries(Q)
     p = {"machine_id": int(machine_id), "ts": ts, "hours": int(window_days) * 24}
     stats = db.read_df(conn, q["before_after_stats"], p)
-    conf = db.read_df(conn, q["window_confounders"], p)
+    conf = db.read_df(conn, q["window_confounders"], {**p, "component": component})
     result = {"table": pd.DataFrame(), "n_before": 0, "n_after": 0, "sufficient": False,
               "messages": [], "confounders": conf, "window_days": int(window_days), "min_obs": min_obs}
     if stats.empty:
